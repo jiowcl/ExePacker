@@ -8,16 +8,16 @@
   <section name="data">
     <explorer view="C:\ProgramData\PureBasic\Examples\" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2026-11-10 19:05" user="Fred" host="DESKTOP-AMI620D"/>
+    <lastopen date="2026-11-10 20:18" user="Fred" host="DESKTOP-AMI620D"/>
   </section>
   <section name="files">
     <file name="Core\ExeStub.pb">
       <config load="0" scan="1" panel="1" warn="1" lastopen="1" sortindex="1" panelstate="++"/>
-      <fingerprint md5="9fbe6ad595aac59de53b7e20f3bb5921"/>
+      <fingerprint md5="fe1e2b48dc811a5a7e9e9217693c9021"/>
     </file>
     <file name="Core\ExePacker.pb">
       <config load="0" scan="1" panel="1" warn="1" lastopen="1" sortindex="2" panelstate="++"/>
-      <fingerprint md5="ea86742fd922add03aaf2fc61e6105fb"/>
+      <fingerprint md5="c5529e2033100ad0c6a432e0a469831a"/>
     </file>
     <file name="Core\Enums.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="1" sortindex="3" panelstate="++"/>

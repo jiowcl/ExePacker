@@ -214,8 +214,7 @@ Procedure.i Main()
   ProcedureReturn result
 EndProcedure
 
-Main()
-End
+End Main()
 ; IDE Options = PureBasic 6.41 (Windows - x64)
 ; CursorPosition = 217
 ; FirstLine = 168
