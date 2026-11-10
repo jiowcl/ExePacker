@@ -19,6 +19,8 @@ Procedure.i Main()
   Protected *tail,   tailOffset.i
   Protected outFile.i
   Protected peType.s
+  Protected fileType.b
+  Protected xorKey.b, obfKey.b
   Protected crc.l
   Protected i.i
   
@@ -26,11 +28,12 @@ Procedure.i Main()
 
   If CountProgramParameters() < 1
     PrintN(#APP_NAME + " " + #APP_VERSION + " by Jiowcl")
-    PrintN("Usage: ExePacker.exe <Target EXE|DLL> [stub.bin]")
+    PrintN("Usage: ExePacker.exe <Target EXE|DLL> [stub.bin] [output path]")
     PrintN("")
     PrintN("Example:")
     PrintN("  ExePacker.exe target.exe")
     PrintN("  ExePacker.exe target.dll stub.bin")
+    PrintN("  ExePacker.exe target.exe stub.bin packed\output.exe")
     ProcedureReturn 1
   EndIf
 
@@ -43,7 +46,7 @@ Procedure.i Main()
   EndIf
 
   If FileSize(targetPath) <= 0
-    PrintN("[Error] Target File Not Found:" + targetPath)
+    PrintN("[Error] Target File Not Found: " + targetPath)
     ProcedureReturn 1
   EndIf
 
@@ -54,12 +57,21 @@ Procedure.i Main()
   EndIf
 
   If IsPEFile(*target, targetSize) = #False
-    PrintN("[Warn] The Target File is Not Invalid PE (MZ) Format, but the Packing Process Continues....")
+    PrintN("[Warn] The Target File is Not a Valid PE (MZ) Format, but the Packing Process Continues....")
     peType = "Unknown"
   Else
     peType = GetPEType(*target, targetSize)
   EndIf
 
+  If peType = "DLL"
+    fileType = #FILE_TYPE_DLL
+  Else
+    fileType = #FILE_TYPE_EXE ; "EXE" and "Unknown" are both treated as best-effort EXE at run time
+  EndIf
+
+  ; CRC32 is computed over the ORIGINAL (plaintext) content, before encryption,
+  ; and is stored in the footer so the Stub can verify the payload was not
+  ; corrupted or tampered with after decrypting it.
   crc = SimpleCRC32(*target, targetSize)
   PrintN("[Info] Target File   : " + targetPath)
   PrintN("[Info] FileType      : " + peType)
@@ -81,12 +93,30 @@ Procedure.i Main()
   EndIf
   
   PrintN("[Info] Stub Size: " + Str(stubSize) + " bytes")
-  PrintN("[Process] Encrypting Target Content（XOR 0x" + Hex(#XOR_KEY, #PB_Byte) + ")...")
-  EncryptBuffer(*target, targetSize, #XOR_KEY)
+
+  ; Each packed build gets its own random key instead of sharing one fixed,
+  ; hard-coded key across every build. This is still only a basic XOR cipher
+  ; (see Helper.pbi), not real encryption - it stops casual inspection, not a
+  ; determined analyst.
+  RandomSeed(ElapsedMilliseconds())
+  xorKey = Random(254) + 1 ; 1..255, never 0 (0 would be a no-op XOR)
+  obfKey = xorKey ! #KEY_MASK
+
+  PrintN("[Process] Encrypting Target Content (XOR, per-build random key)...")
+  EncryptBuffer(*target, targetSize, xorKey)
 
   tailOffset = stubSize
 
-  outputPath = GetPathPart(targetPath) + "packed_" + GetFilePart(targetPath)
+  If CountProgramParameters() >= 3
+    outputPath = ProgramParameter(2)
+  Else
+    outputPath = GetPathPart(targetPath) + "packed_" + GetFilePart(targetPath)
+  EndIf
+
+  If FileSize(outputPath) > 0
+    PrintN("[Warn] Output File Already Exists and Will Be Overwritten: " + outputPath)
+  EndIf
+
   outFile = CreateFile(#PB_Any, outputPath)
   
   If outFile = 0
@@ -96,15 +126,31 @@ Procedure.i Main()
     ProcedureReturn 1
   EndIf
 
-  WriteData(outFile, *stub, stubSize)
-  WriteData(outFile, *target, targetSize)
+  If WriteData(outFile, *stub, stubSize) <> stubSize
+    PrintN("[Error] Failed to Write Stub Data (disk full?)")
+    CloseFile(outFile)
+    FreeMemory(*target)
+    FreeMemory(*stub)
+    ProcedureReturn 1
+  EndIf
 
-  For i = 0 To 7
+  If WriteData(outFile, *target, targetSize) <> targetSize
+    PrintN("[Error] Failed to Write Target Data (disk full?)")
+    CloseFile(outFile)
+    FreeMemory(*target)
+    FreeMemory(*stub)
+    ProcedureReturn 1
+  EndIf
+
+  For i = 0 To #MAGIC_LEN - 1
     WriteByte(outFile, Asc(Mid(#MAGIC_STR, i + 1, 1)))
   Next
   
+  WriteByte(outFile, fileType)
+  WriteByte(outFile, obfKey)
   WriteLong(outFile, targetSize)
   WriteLong(outFile, tailOffset)
+  WriteLong(outFile, crc)
 
   CloseFile(outFile)
   FreeMemory(*target)
@@ -112,7 +158,7 @@ Procedure.i Main()
 
   PrintN("[Completed] Packing Successful!")
   PrintN("[Output] " + outputPath)
-  PrintN("[Info] Output Size: " + Str(stubSize + targetSize + 16) + " bytes")
+  PrintN("[Info] Output Size: " + Str(stubSize + targetSize + #FOOTER_SIZE) + " bytes")
 
   ProcedureReturn 0
 EndProcedure
@@ -120,7 +166,8 @@ EndProcedure
 Main()
 End
 ; IDE Options = PureBasic 6.41 (Windows - x64)
-; CursorPosition = 27
+; CursorPosition = 166
+; FirstLine = 117
 ; Folding = -
 ; Optimizer
 ; EnableThread

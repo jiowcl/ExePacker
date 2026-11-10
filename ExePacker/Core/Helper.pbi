@@ -4,7 +4,7 @@
 ;--------------------------------------------------------------------------------------------
 
 ; <summary>
-; EncryptBuffer
+; EncryptBuffer - XOR every byte of the buffer with a single-byte key.
 ; </summary>
 ; <param name="*buf">pointer</param>
 ; <param name="size">integer</param>
@@ -19,16 +19,19 @@ Procedure EncryptBuffer(*buf, size.i, key.b)
 EndProcedure
 
 ; <summary>
-; DecryptBuffer
+; DecryptBuffer - XOR is symmetric, so this performs the same operation as
+; EncryptBuffer(); it takes the key explicitly because each packed build now
+; uses its own randomly generated key instead of a single global constant.
 ; </summary>
 ; <param name="*buf">pointer</param>
 ; <param name="size">integer</param>
+; <param name="key">byte</param>
 ; <returns>Returns void.</returns>
-Procedure DecryptBuffer(*buf, size.i)
+Procedure DecryptBuffer(*buf, size.i, key.b)
   Protected i.i
   
   For i = 0 To size - 1
-    PokeB(*buf + i, PeekB(*buf + i) ! #XOR_KEY)
+    PokeB(*buf + i, PeekB(*buf + i) ! key)
   Next
 EndProcedure
 
@@ -46,19 +49,22 @@ Procedure.b IsPEFile(*buf, size.i)
 EndProcedure
 
 ; <summary>
-; IsPEFile
+; GetPEType - Reads IMAGE_DOS_HEADER/IMAGE_FILE_HEADER to classify EXE vs DLL.
+; e_lfanew is treated as unsigned and range-checked against the buffer size
+; before use, so a malformed/crafted header cannot push the read pointer
+; out of bounds.
 ; </summary>
 ; <param name="*buf">pointer</param>
 ; <param name="size">integer</param>
 ; <returns>Returns string.</returns>
 Procedure.s GetPEType(*buf, size.i)
-  Protected e_lfanew.l, peOffset.i, characteristics.w
+  Protected e_lfanew.l, peOffset.q, characteristics.w
   If size < 64 : ProcedureReturn "Unknown" : EndIf
   
-  e_lfanew  = PeekL(*buf + 60) ; IMAGE_DOS_HEADER.e_lfanew
-  peOffset  = e_lfanew
+  e_lfanew = PeekL(*buf + 60)          ; IMAGE_DOS_HEADER.e_lfanew
+  peOffset = e_lfanew & $FFFFFFFF      ; treat as unsigned to avoid negative offsets
   
-  If peOffset + 24 > size : ProcedureReturn "Unknown" : EndIf
+  If peOffset < 4 Or peOffset + 24 > size : ProcedureReturn "Unknown" : EndIf
   If PeekL(*buf + peOffset) <> $00004550 : ProcedureReturn "Unknown" : EndIf ; 'PE\0\0'
   
   characteristics = PeekW(*buf + peOffset + 22) ; IMAGE_FILE_HEADER.Characteristics
@@ -100,7 +106,7 @@ EndProcedure
 ; </summary>
 ; <param name="path">string</param>
 ; <param name="*outSize">pointer</param>
-; <returns>Returns pointer.</returns>
+; <returns>Returns pointer (0 on any failure).</returns>
 Procedure ReadWholeFile(path.s, *outSize)
   Protected f.i, sz.i, *buf
   
@@ -108,10 +114,21 @@ Procedure ReadWholeFile(path.s, *outSize)
   If f = 0 : ProcedureReturn 0 : EndIf
   
   sz = Lof(f)
+  
+  If sz <= 0
+    CloseFile(f)
+    ProcedureReturn 0
+  EndIf
+  
   *buf = AllocateMemory(sz)
   
   If *buf
-    ReadData(f, *buf, sz)
+    If ReadData(f, *buf, sz) <> sz
+      FreeMemory(*buf)
+      CloseFile(f)
+      ProcedureReturn 0
+    EndIf
+    
     PokeI(*outSize, sz)
   EndIf
   
@@ -119,9 +136,10 @@ Procedure ReadWholeFile(path.s, *outSize)
   
   ProcedureReturn *buf
 EndProcedure
+
 ; IDE Options = PureBasic 6.41 (Windows - x64)
-; CursorPosition = 120
-; FirstLine = 71
+; CursorPosition = 137
+; FirstLine = 89
 ; Folding = --
 ; Optimizer
 ; EnableThread
