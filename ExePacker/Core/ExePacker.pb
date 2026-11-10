@@ -98,7 +98,7 @@ Procedure.i Main()
   ; hard-coded key across every build. This is still only a basic XOR cipher
   ; (see Helper.pbi), not real encryption - it stops casual inspection, not a
   ; determined analyst.
-  RandomSeed(ElapsedMilliseconds())
+  RandomSeed(Date() ! GetCurrentProcessId_() ! ElapsedMilliseconds())
   xorKey = Random(254) + 1 ; 1..255, never 0 (0 would be a no-op XOR)
   obfKey = xorKey ! #KEY_MASK
 
@@ -165,8 +165,8 @@ EndProcedure
 
 End Main()
 ; IDE Options = PureBasic 6.41 (Windows - x64)
-; CursorPosition = 166
-; FirstLine = 117
+; CursorPosition = 100
+; FirstLine = 82
 ; Folding = -
 ; Optimizer
 ; EnableThread

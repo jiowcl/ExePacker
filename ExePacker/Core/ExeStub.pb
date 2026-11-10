@@ -73,7 +73,7 @@ EndProcedure
 Procedure.s BuildTempPath(extension.s)
   Protected path.s, tries.i
   
-  RandomSeed(ElapsedMilliseconds())
+  RandomSeed(Date() ! GetCurrentProcessId_() ! ElapsedMilliseconds())
   
   For tries = 1 To 20
     path = GetTemporaryDirectory() + "~exepacker_" + Str(ElapsedMilliseconds()) + "_" + Str(Random(999999)) + extension
@@ -216,8 +216,8 @@ EndProcedure
 
 End Main()
 ; IDE Options = PureBasic 6.41 (Windows - x64)
-; CursorPosition = 217
-; FirstLine = 168
+; CursorPosition = 75
+; FirstLine = 39
 ; Folding = -
 ; Optimizer
 ; EnableThread
