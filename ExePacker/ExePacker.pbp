@@ -8,24 +8,28 @@
   <section name="data">
     <explorer view="C:\ProgramData\PureBasic\Examples\" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2026-11-10 16:21" user="Fred" host="DESKTOP-AMI620D"/>
+    <lastopen date="2026-11-10 16:35" user="Fred" host="DESKTOP-AMI620D"/>
   </section>
   <section name="files">
-    <file name="Core\Enums.pbi">
-      <config load="0" scan="1" panel="1" warn="1" lastopen="1" sortindex="3" panelstate="++"/>
-      <fingerprint md5="3c19a3ac357fe4d2ae473e6c312daaf1"/>
+    <file name="Core\ExeStub.pb">
+      <config load="0" scan="1" panel="1" warn="1" lastopen="1" sortindex="1" panelstate="++"/>
+      <fingerprint md5="fbfadc17c740c6a5aa1982fe00506ec9"/>
     </file>
     <file name="Core\ExePacker.pb">
       <config load="0" scan="1" panel="1" warn="1" lastopen="1" sortindex="2" panelstate="++"/>
       <fingerprint md5="67257e3730c9cc6e680d36e6ab8bd795"/>
     </file>
-    <file name="Core\ExeStub.pb">
-      <config load="0" scan="1" panel="1" warn="1" lastopen="1" sortindex="1" panelstate="++"/>
-      <fingerprint md5="fbfadc17c740c6a5aa1982fe00506ec9"/>
+    <file name="Core\Enums.pbi">
+      <config load="0" scan="1" panel="1" warn="1" lastopen="1" sortindex="3" panelstate="++"/>
+      <fingerprint md5="3c19a3ac357fe4d2ae473e6c312daaf1"/>
     </file>
     <file name="Core\Helper.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="1" sortindex="4" panelstate="++"/>
       <fingerprint md5="e08597dd5494a34f25331a254d0d0c26"/>
+    </file>
+    <file name="Core\Demo.pb">
+      <config load="0" scan="1" panel="1" warn="1" lastopen="1" sortindex="5" panelstate="++"/>
+      <fingerprint md5="b7b12702aaf47806fc6b21eb245f0883"/>
     </file>
   </section>
   <section name="targets">
@@ -74,6 +78,13 @@
         <field13 value="jiowcl@gmail.com"/>
         <field14 value="https://inwazy.com"/>
       </versioninfo>
+    </target>
+    <target name="Demo" enabled="1" default="0">
+      <inputfile value="Core\Demo.pb"/>
+      <outputfile value="Output\Demo.exe"/>
+      <compiler version="PureBasic 6.41 - C Backend (Windows - x64)"/>
+      <executable value="Output\Demo.exe"/>
+      <options asm="1" dllprotection="1" optimizer="1"/>
     </target>
   </section>
 </project>
