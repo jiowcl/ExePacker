@@ -59,8 +59,13 @@ Procedure.i Main()
 
   origSize   = ReadLong(selfFile)
   origOffset = ReadLong(selfFile)
-
   *payload = AllocateMemory(origSize)
+  
+  If origSize <= 0 Or origOffset < 0 Or origOffset + origSize > fileSize - 16
+    CloseFile(selfFile) 
+    
+    ProcedureReturn 1
+  EndIf
   
   If *payload = 0
     CloseFile(selfFile)
@@ -87,7 +92,7 @@ Procedure.i Main()
   CloseFile(tempFile)
   FreeMemory(*payload)
 
-  RunHidden(tempPath, "")
+  RunHidden(tempPath, ProgramParameter())
   DeleteFile(tempPath)
 
   ProcedureReturn 0
@@ -96,11 +101,12 @@ EndProcedure
 Main()
 End
 ; IDE Options = PureBasic 6.41 (Windows - x64)
-; CursorPosition = 96
-; FirstLine = 47
+; CursorPosition = 97
+; FirstLine = 52
 ; Folding = -
 ; Optimizer
 ; EnableThread
 ; EnableOnError
+; Executable = ..\Output\ExeStub.exe
 ; CompileSourceDirectory
 ; Compiler = PureBasic 6.40 - C Backend (Windows - x64)
