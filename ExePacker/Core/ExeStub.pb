@@ -8,6 +8,9 @@ EnableExplicit
 IncludeFile "Enums.pbi"
 IncludeFile "Helper.pbi"
 
+; Embeds the LZMA packer/unpacker code into this build
+UseLZMAPacker()
+
 Prototype.i pDllEntryPoint()
 
 ImportC "kernel32.lib"
@@ -48,6 +51,7 @@ Procedure.i RunDll(dllPath.s)
   Protected hLib.i, *proc, entry.pDllEntryPoint
   
   hLib = LoadLibraryW(dllPath)
+  
   If hLib = 0
     ProcedureReturn 1
   EndIf
@@ -76,14 +80,15 @@ Procedure.s BuildTempPath(extension.s)
   RandomSeed(Date() ! GetCurrentProcessId_() ! ElapsedMilliseconds())
   
   For tries = 1 To 20
-    path = GetTemporaryDirectory() + "~exepacker_" + Str(ElapsedMilliseconds()) + "_" + Str(Random(999999)) + extension
+    path = GetTemporaryDirectory() + "~exepacker_" + Str(Date()) + "_" + Str(GetCurrentProcessId_()) + "_" + Str(Random(999999)) + extension
+    
     If FileSize(path) = -1 ; does not exist yet
       ProcedureReturn path
     EndIf
   Next
   
   ; Extremely unlikely fallback if 20 attempts all collided
-  ProcedureReturn GetTemporaryDirectory() + "~exepacker_" + Str(ElapsedMilliseconds()) + "_" + Str(Random(999999999)) + extension
+  ProcedureReturn GetTemporaryDirectory() + "~exepacker_" + Str(Date()) + "_" + Str(GetCurrentProcessId_()) + "_" + Str(Random(999999999)) + extension
 EndProcedure
 
 ; <summary>
@@ -92,13 +97,15 @@ EndProcedure
 ; <returns>
 ; Returns the payload's exit code when the payload is an EXE (or 0 for a
 ; successfully run DLL). Returns 1 if ExeStub itself could not unpack or
-; verify the payload (missing/corrupt footer, CRC mismatch, I/O failure).
+; verify the payload (missing/corrupt footer, CRC mismatch, I/O failure,
+; oversized OrigSize).
 ; </returns>
 Procedure.i Main()
   Protected selfPath.s, selfFile.i, fileSize.i
-  Protected fileType.b, obfKey.b, xorKey.b
-  Protected origSize.i, origOffset.i, origCRC.l, actualCRC.l
-  Protected *payload, tempPath.s, tempFile.i
+  Protected fileType.b, obfKey.b, xorKey.b, compressed.b
+  Protected storedSize.i, origSize.i, storedOffset.i, origCRC.l, actualCRC.l
+  Protected *storedBuf, *payload, decompressedSize.i
+  Protected tempPath.s, tempFile.i
   Protected magicBuf.s{8}, i.i, b.b
   Protected result.i, params.s
 
@@ -126,47 +133,80 @@ Procedure.i Main()
     ProcedureReturn 1
   EndIf
 
-  fileType   = ReadByte(selfFile)
-  obfKey     = ReadByte(selfFile)
-  origSize   = ReadLong(selfFile)
-  origOffset = ReadLong(selfFile)
-  origCRC    = ReadLong(selfFile)
+  fileType     = ReadByte(selfFile)
+  obfKey       = ReadByte(selfFile)
+  compressed   = ReadByte(selfFile)
+  storedSize   = ReadLong(selfFile)
+  origSize     = ReadLong(selfFile)
+  storedOffset = ReadLong(selfFile)
+  origCRC      = ReadLong(selfFile)
 
   ; Bounds / sanity validation
   ; The footer is just data appended to our own file. A truncated,
-  ; corrupted, or hand-edited file must never be able to make us read
-  ; or allocate out of bounds.
-  If origSize <= 0 Or origOffset < 0 Or origOffset + origSize > fileSize - #FOOTER_SIZE
+  ; corrupted, or hand-edited file must never be able to make us read,
+  ; allocate, or decompress out of reasonable bounds.
+  If storedSize <= 0 Or storedOffset < 0 Or storedOffset + storedSize > fileSize - #FOOTER_SIZE
+    CloseFile(selfFile)
+    ProcedureReturn 1
+  EndIf
+  
+  If origSize <= 0 Or origSize > #MAX_PAYLOAD_SIZE
+    CloseFile(selfFile)
+    ProcedureReturn 1
+  EndIf
+  
+  If compressed = #False And origSize <> storedSize
+    ; Uncompressed payloads must have identical stored/original sizes;
+    ; anything else means the footer was tampered with or corrupted.
     CloseFile(selfFile)
     ProcedureReturn 1
   EndIf
 
   xorKey = obfKey ! #KEY_MASK
-
-  *payload = AllocateMemory(origSize)
+  *storedBuf = AllocateMemory(storedSize)
   
-  If *payload = 0
+  If *storedBuf = 0
     CloseFile(selfFile)
     ProcedureReturn 1
   EndIf
 
-  FileSeek(selfFile, origOffset)
+  FileSeek(selfFile, storedOffset)
   
-  If ReadData(selfFile, *payload, origSize) <> origSize
+  If ReadData(selfFile, *storedBuf, storedSize) <> storedSize
     CloseFile(selfFile)
-    FreeMemory(*payload)
+    FreeMemory(*storedBuf)
     ProcedureReturn 1
   EndIf
   
   CloseFile(selfFile)
 
-  DecryptBuffer(*payload, origSize, xorKey)
+  DecryptBuffer(*storedBuf, storedSize, xorKey)
 
-  ; Integrity check
-  ; Confirms the decrypted payload matches what was packed, instead of
-  ; silently running (or trying to run) a corrupted/tampered executable.
+  ; Decompression (if the payload was compressed)
+  If compressed
+    *payload = AllocateMemory(origSize)
+    
+    If *payload = 0
+      FreeMemory(*storedBuf)
+      ProcedureReturn 1
+    EndIf
+    
+    decompressedSize = UncompressMemory(*storedBuf, storedSize, *payload, origSize, #PB_PackerPlugin_Lzma)
+    FreeMemory(*storedBuf)
+    
+    If decompressedSize <> origSize
+      FreeMemory(*payload)
+      ProcedureReturn 1
+    EndIf
+  Else
+    *payload = *storedBuf ; already the original, plaintext content
+  EndIf
+
+  ; --- Integrity check --------------------------------------------------
+  ; Confirms the final payload (after decrypting AND, if applicable,
+  ; decompressing) matches what was packed, instead of silently running (or
+  ; trying to run) a corrupted/tampered executable.
   actualCRC = SimpleCRC32(*payload, origSize)
-  
   If actualCRC <> origCRC
     FreeMemory(*payload)
     ProcedureReturn 1
@@ -200,7 +240,6 @@ Procedure.i Main()
   Else
     ; Forward whatever arguments the packed EXE was given on to the real payload
     params = ""
-    
     For i = 0 To CountProgramParameters() - 1
       If i > 0 : params + " " : EndIf
       params + Chr(34) + ProgramParameter(i) + Chr(34)
@@ -216,8 +255,7 @@ EndProcedure
 
 End Main()
 ; IDE Options = PureBasic 6.41 (Windows - x64)
-; CursorPosition = 75
-; FirstLine = 39
+; CursorPosition = 143
 ; Folding = -
 ; Optimizer
 ; EnableThread

@@ -8,6 +8,8 @@ EnableExplicit
 IncludeFile "Enums.pbi"
 IncludeFile "Helper.pbi"
 
+UseLZMAPacker() ; embeds the LZMA packer/unpacker code into this build
+
 ; <summary>
 ; Main
 ; </summary>
@@ -16,13 +18,15 @@ Procedure.i Main()
   Protected targetPath.s, stubPath.s, outputPath.s
   Protected *target, targetSize.i
   Protected *stub,   stubSize.i
-  Protected *tail,   tailOffset.i
+  Protected tailOffset.i
   Protected outFile.i
   Protected peType.s
   Protected fileType.b
   Protected xorKey.b, obfKey.b
   Protected crc.l
   Protected i.i
+  Protected *compBuf, compBufCapacity.i, compressedSize.i
+  Protected *storedBuf, storedSize.i, compressed.b
   
   OpenConsole(#APP_NAME)
 
@@ -69,9 +73,9 @@ Procedure.i Main()
     fileType = #FILE_TYPE_EXE ; "EXE" and "Unknown" are both treated as best-effort EXE at run time
   EndIf
 
-  ; CRC32 is computed over the ORIGINAL (plaintext) content, before encryption,
-  ; and is stored in the footer so the Stub can verify the payload was not
-  ; corrupted or tampered with after decrypting it.
+  ; CRC32 is computed over the ORIGINAL (plaintext, decompressed) content and
+  ; is stored in the footer so the Stub can verify, after decrypting AND
+  ; decompressing, that it ended up with exactly what was packed.
   crc = SimpleCRC32(*target, targetSize)
   PrintN("[Info] Target File   : " + targetPath)
   PrintN("[Info] FileType      : " + peType)
@@ -94,6 +98,38 @@ Procedure.i Main()
   
   PrintN("[Info] Stub Size: " + Str(stubSize) + " bytes")
 
+  ; Compression
+  ; Compress BEFORE encrypting: LZMA needs to see the real byte patterns of
+  ; the original content to find anything to compress; XOR'd data looks like
+  ; noise and will not compress at all. Allow some headroom in the output
+  ; buffer since compressed data can (rarely) end up slightly larger than
+  ; the input for already-dense/incompressible content.
+  compBufCapacity = targetSize + (targetSize / 10) + 4096
+  *compBuf = AllocateMemory(compBufCapacity)
+  
+  compressed  = #False
+  *storedBuf  = *target
+  storedSize  = targetSize
+  
+  If *compBuf
+    compressedSize = CompressMemory(*target, targetSize, *compBuf, compBufCapacity, #PB_PackerPlugin_Lzma, #COMPRESS_LEVEL)
+    
+    If compressedSize > 0 And compressedSize < targetSize
+      compressed = #True
+      *storedBuf = *compBuf
+      storedSize = compressedSize
+    Else
+      FreeMemory(*compBuf)
+      *compBuf = 0
+    EndIf
+  EndIf
+
+  If compressed
+    PrintN("[Info] Compressed Size: " + Str(storedSize) + " bytes (" + StrD(100.0 * storedSize / targetSize, 1) + "% of original)")
+  Else
+    PrintN("[Info] Compression Did Not Help - Storing Raw Content")
+  EndIf
+
   ; Each packed build gets its own random key instead of sharing one fixed,
   ; hard-coded key across every build. This is still only a basic XOR cipher
   ; (see Helper.pbi), not real encryption - it stops casual inspection, not a
@@ -102,8 +138,8 @@ Procedure.i Main()
   xorKey = Random(254) + 1 ; 1..255, never 0 (0 would be a no-op XOR)
   obfKey = xorKey ! #KEY_MASK
 
-  PrintN("[Process] Encrypting Target Content (XOR, per-build random key)...")
-  EncryptBuffer(*target, targetSize, xorKey)
+  PrintN("[Process] Encrypting Content (XOR, per-build random key)...")
+  EncryptBuffer(*storedBuf, storedSize, xorKey)
 
   tailOffset = stubSize
 
@@ -123,6 +159,9 @@ Procedure.i Main()
     PrintN("[Error] Unable to Create Output File: " + outputPath)
     FreeMemory(*target)
     FreeMemory(*stub)
+    
+    If *compBuf : FreeMemory(*compBuf) : EndIf
+    
     ProcedureReturn 1
   EndIf
 
@@ -131,14 +170,20 @@ Procedure.i Main()
     CloseFile(outFile)
     FreeMemory(*target)
     FreeMemory(*stub)
+    
+    If *compBuf : FreeMemory(*compBuf) : EndIf
+    
     ProcedureReturn 1
   EndIf
 
-  If WriteData(outFile, *target, targetSize) <> targetSize
-    PrintN("[Error] Failed to Write Target Data (disk full?)")
+  If WriteData(outFile, *storedBuf, storedSize) <> storedSize
+    PrintN("[Error] Failed to Write Payload Data (disk full?)")
     CloseFile(outFile)
     FreeMemory(*target)
     FreeMemory(*stub)
+    
+    If *compBuf : FreeMemory(*compBuf) : EndIf
+    
     ProcedureReturn 1
   EndIf
 
@@ -148,6 +193,8 @@ Procedure.i Main()
   
   WriteByte(outFile, fileType)
   WriteByte(outFile, obfKey)
+  WriteByte(outFile, compressed)
+  WriteLong(outFile, storedSize)
   WriteLong(outFile, targetSize)
   WriteLong(outFile, tailOffset)
   WriteLong(outFile, crc)
@@ -155,10 +202,12 @@ Procedure.i Main()
   CloseFile(outFile)
   FreeMemory(*target)
   FreeMemory(*stub)
+  
+  If *compBuf : FreeMemory(*compBuf) : EndIf
 
   PrintN("[Completed] Packing Successful!")
   PrintN("[Output] " + outputPath)
-  PrintN("[Info] Output Size: " + Str(stubSize + targetSize + #FOOTER_SIZE) + " bytes")
+  PrintN("[Info] Output Size: " + Str(stubSize + storedSize + #FOOTER_SIZE) + " bytes")
 
   ProcedureReturn 0
 EndProcedure
@@ -166,7 +215,7 @@ EndProcedure
 End Main()
 ; IDE Options = PureBasic 6.41 (Windows - x64)
 ; CursorPosition = 100
-; FirstLine = 82
+; FirstLine = 59
 ; Folding = -
 ; Optimizer
 ; EnableThread

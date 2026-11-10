@@ -8,24 +8,24 @@
   <section name="data">
     <explorer view="C:\ProgramData\PureBasic\Examples\" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2026-11-10 20:18" user="Fred" host="DESKTOP-AMI620D"/>
+    <lastopen date="2026-11-10 20:35" user="Fred" host="DESKTOP-AMI620D"/>
   </section>
   <section name="files">
     <file name="Core\ExeStub.pb">
       <config load="0" scan="1" panel="1" warn="1" lastopen="1" sortindex="1" panelstate="++"/>
-      <fingerprint md5="fe1e2b48dc811a5a7e9e9217693c9021"/>
+      <fingerprint md5="77cd0d340629e284a55172504543ce4e"/>
     </file>
     <file name="Core\ExePacker.pb">
       <config load="0" scan="1" panel="1" warn="1" lastopen="1" sortindex="2" panelstate="++"/>
-      <fingerprint md5="c5529e2033100ad0c6a432e0a469831a"/>
+      <fingerprint md5="253b0cf4b3adc1f7f09ad8139a03fa55"/>
     </file>
     <file name="Core\Enums.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="1" sortindex="3" panelstate="++"/>
-      <fingerprint md5="a242784674846083b47c93f8b7c9cd7b"/>
+      <fingerprint md5="68123b8e57612f0a058603d5016d20ee"/>
     </file>
     <file name="Core\Helper.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="1" sortindex="4" panelstate="++"/>
-      <fingerprint md5="9f16f85c70c192bd690b1387f21434ec"/>
+      <fingerprint md5="2ff57b95b392c7009ad3200533c8d1a8"/>
     </file>
     <file name="Core\Demo.pb">
       <config load="0" scan="1" panel="1" warn="1" lastopen="1" sortindex="5" panelstate="++"/>
@@ -42,12 +42,12 @@
       <temporaryexe value="source"/>
       <format exe="console" cpu="0"/>
       <versioninfo enable="1">
-        <field0 value="1.1.0.0"/>
-        <field1 value="1.1.0.0"/>
+        <field0 value="1.2.0.0"/>
+        <field1 value="1.2.0.0"/>
         <field2 value="Inwazy Technology"/>
         <field3 value="ExePacker"/>
-        <field4 value="1.1"/>
-        <field5 value="1.1"/>
+        <field4 value="1.2"/>
+        <field5 value="1.2"/>
         <field6 value="Simple PE File Packer"/>
         <field7 value="ExePacker"/>
         <field8 value="ExePacker"/>
@@ -64,12 +64,12 @@
       <executable value="Output\ExeStub.exe"/>
       <options thread="1" dllprotection="1" onerror="1" optimizer="1"/>
       <versioninfo enable="1">
-        <field0 value="1.1.0.0"/>
-        <field1 value="1.1.0.0"/>
+        <field0 value="1.2.0.0"/>
+        <field1 value="1.2.0.0"/>
         <field2 value="Inwazy Technology"/>
         <field3 value="ExeStub"/>
-        <field4 value="1.1"/>
-        <field5 value="1.1"/>
+        <field4 value="1.2"/>
+        <field5 value="1.2"/>
         <field6 value="Simple PE File Packer Stub"/>
         <field7 value="ExeStub"/>
         <field8 value="ExeStub"/>
