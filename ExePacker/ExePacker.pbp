@@ -8,7 +8,7 @@
   <section name="data">
     <explorer view="C:\ProgramData\PureBasic\Examples\" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2026-11-10 19:02" user="Fred" host="DESKTOP-AMI620D"/>
+    <lastopen date="2026-11-10 19:05" user="Fred" host="DESKTOP-AMI620D"/>
   </section>
   <section name="files">
     <file name="Core\ExeStub.pb">
@@ -42,12 +42,12 @@
       <temporaryexe value="source"/>
       <format exe="console" cpu="0"/>
       <versioninfo enable="1">
-        <field0 value="1.0.0.0"/>
-        <field1 value="1.0.0.0"/>
+        <field0 value="1.1.0.0"/>
+        <field1 value="1.1.0.0"/>
         <field2 value="Inwazy Technology"/>
         <field3 value="ExePacker"/>
-        <field4 value="1.0"/>
-        <field5 value="1.0"/>
+        <field4 value="1.1"/>
+        <field5 value="1.1"/>
         <field6 value="Simple PE File Packer"/>
         <field7 value="ExePacker"/>
         <field8 value="ExePacker"/>
@@ -64,12 +64,12 @@
       <executable value="Output\ExeStub.exe"/>
       <options thread="1" dllprotection="1" onerror="1" optimizer="1"/>
       <versioninfo enable="1">
-        <field0 value="1.0.0.0"/>
-        <field1 value="1.0.0.0"/>
+        <field0 value="1.1.0.0"/>
+        <field1 value="1.1.0.0"/>
         <field2 value="Inwazy Technology"/>
         <field3 value="ExeStub"/>
-        <field4 value="1.0"/>
-        <field5 value="1.0"/>
+        <field4 value="1.1"/>
+        <field5 value="1.1"/>
         <field6 value="Simple PE File Packer Stub"/>
         <field7 value="ExeStub"/>
         <field8 value="ExeStub"/>
