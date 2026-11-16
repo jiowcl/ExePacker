@@ -30,6 +30,11 @@ ExePacker.exe target.dll stub.bin
 Copyright (c) 2014-2026 Ji-Feng Tsai.  
 Code released under the MIT license.  
 
+### Usage & Disclaimer  
+
+- **Packed Outputs:** Applications, scripts, or PE files packed, bound, or processed using ExePacker remain the intellectual property of their respective creators. You are free to distribute or commercialize your packed binaries under any license.  
+- **As-Is Warranty:** This tool is provided "as is", without warranty of any kind. The author holds no responsibility for any antivirus false positives, system behavior, or damages arising from the use of packed executables.  
+
 ## Donation  
 
 If this application help you reduce time to coding, you can give me a cup of coffee :)  
